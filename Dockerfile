@@ -1,33 +1,25 @@
-FROM node:latest as ui
-RUN npm install -g gulp browserify babelify
-COPY ui/package.json /tmp/
-COPY ui/semantic.json /tmp/
-RUN cd /tmp && npm install && \
-    mkdir -p /usr/src/app/ui && \
-    cp -rf /tmp/node_modules /usr/src/app/ui/
-WORKDIR /usr/src/app
-COPY . /usr/src/app
-RUN cd ui/node_modules/semantic-ui && gulp install
-RUN cp -f ui/semantic.theme.config ui/semantic/src/theme.config && \
-    mkdir -p ui/semantic/src/themes/app && \
-    cp -rf ui/semantic.theme/* ui/semantic/src/themes/app
-RUN cd ui/semantic && gulp build
+# Build from the official golang image based on alpine
+FROM golang:1.18-alpine AS build
 
-FROM golang:1.11-alpine as app
-RUN apk add -U build-base git
+# Copy the source code to a new working directory
 COPY . /go/src/app
 WORKDIR /go/src/app
-ENV GO111MODULE=on
-RUN go build -a -v -tags 'netgo' -ldflags '-w -linkmode external -extldflags -static' -o docker-demo .
 
+# Build the binary
+RUN go get -v -d && go build -v -o docker-demo
+
+# Start from a clean alpine image
 FROM alpine:latest
-MAINTAINER "Evan Hazlett <ejhazlett@gmail.com>"
+LABEL maintainer="Noah Merlis-Stephens <nmerlisstephens@mirantis.com"
+
+# Install dependencies
 RUN apk add -U --no-cache curl
+
+# Transfer static content and binary
 COPY static /static
-COPY --from=ui /usr/src/app/ui/semantic/dist/semantic.min.css static/dist/semantic.min.css
-COPY --from=ui /usr/src/app/ui/semantic/dist/semantic.min.js static/dist/semantic.min.js
-COPY --from=ui /usr/src/app/ui/semantic/dist/themes/default/assets static/dist/themes/default/
-COPY --from=app /go/src/app/docker-demo /bin/docker-demo
 COPY templates /templates
+COPY --from=build /go/src/app/docker-demo /bin/docker-demo
+
+# Configure image to run app
 EXPOSE 8080
 ENTRYPOINT ["/bin/docker-demo"]

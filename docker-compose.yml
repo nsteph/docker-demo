@@ -1,6 +1,9 @@
-app:
-    build: .
-    hostname: dockercon
-    domainname: demo.local
-    ports:
-        - "8080"
+services:
+    app:
+        build: .
+        environment:
+            - "TITLE=Docker Demo"
+        hostname: dockercon
+        domainname: demo.local
+        ports:
+            - "8080:8080"
