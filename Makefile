@@ -2,7 +2,7 @@ CGO_ENABLED=0
 GOOS=linux
 GOARCH=amd64
 TAG?=latest
-REPO=nsteph/docker-demo
+REPO=nmsteph/docker-demo
 
 all: build
 
